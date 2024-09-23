@@ -1,6 +1,10 @@
 {
   "name": "@pepalabs-cura/cura_contract_client",
   "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PEPALabs/cura_contract_client"
+  },
   "main": "index.js",
   "scripts": {
     "build": "tsc",
