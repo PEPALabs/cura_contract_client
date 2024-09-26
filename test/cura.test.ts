@@ -30,8 +30,6 @@ describe("cura test", () => {
         // Initialize the program.
         cura = new Cura(provider);
 
-        console.log("program method: ", cura.program.methods);
-
         // Airdrop some SOL to the player
         await provider.connection.confirmTransaction(
             await provider.connection.requestAirdrop(player.publicKey, LAMPORTS_PER_SOL),
@@ -41,23 +39,24 @@ describe("cura test", () => {
     });
 
 
-    it("init or update admin management!", async () => {
-        const newAdmin = new Keypair();
-        const ix = await cura.initOrUpdateAdminManagement(newAdmin.publicKey, 0);
-        const tx = await provider.sendAndConfirm(new Transaction().add(ix), [super_admint_wallet.payer]);
-        // const admin_management = await cura.program.account.AdminManagement.fetch(adminManagementPDA);
-        // assert.equal(admin_management.admins[0].toBase58(), newAdmin.publicKey.toBase58());
-        console.log("init or update admin management signature: ", tx);
-    })
-    it("create minter!", async () => {
-        const ix = await cura.createMinter();
-        const tx = await provider.sendAndConfirm(new Transaction().add(ix), [super_admint_wallet.payer]);
+    // it("init or update admin management!", async () => {
+    //     const newAdmin = new Keypair();
+    //     const ix = await cura.initOrUpdateAdminManagement(newAdmin.publicKey, 0);
+    //     const tx = await provider.sendAndConfirm(new Transaction().add(ix), [super_admint_wallet.payer]);
+    //     // const admin_management = await cura.program.account.AdminManagement.fetch(adminManagementPDA);
+    //     // assert.equal(admin_management.admins[0].toBase58(), newAdmin.publicKey.toBase58());
+    //     console.log("init or update admin management signature: ", tx);
+    // })
+    // it("create minter!", async () => {
+    //     const ix = await cura.createMinter();
+    //     const tx = await provider.sendAndConfirm(new Transaction().add(ix), [super_admint_wallet.payer]);
 
-        console.log("Your transaction signature", tx);
-        console.log("Success!");
-        console.log(`   Mint Address: ${tokenMintPDA}`);
-        console.log(`   Transaction Signature: ${tx}`);
-    });
+    //     console.log("Your transaction signature", tx);
+    //     console.log("Success!");
+    //     console.log(`   Mint Address: ${tokenMintPDA}`);
+    //     console.log(`   Transaction Signature: ${tx}`);
+    // });
+
     it ("distribute rewards!", async () => {
         const memo = "Amount: 10, Award venue: [116.42,39.92], Award type: [comment]";
         const tx = await cura.distributeTokenRewards(player.publicKey, 10, memo);
@@ -76,4 +75,10 @@ describe("cura test", () => {
         const tokenBalance = await provider.connection.getTokenAccountBalance(playerTokenAccount.value[0].pubkey);
         assert.equal(tokenBalance.value.amount, "0");
     });
+
+    it("transfer the tokens" , async () => {
+        const reviever = new PublicKey("zdLTKiwtjkpB5ZS4TFDV182jUUXu1hEzb5D3PiwowoE");
+        const tx = await cura.transferTokens(super_admint_wallet.payer, reviever, 5000);
+        console.log("transfer tx: ", tx);
+    })
 });
