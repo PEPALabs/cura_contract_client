@@ -3,8 +3,6 @@ import { strict as assert } from 'node:assert';
 import { adminManagementPDA, Cura, tokenMintPDA } from "../src/cura";
 import { PublicKey, Keypair, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { program } from "@coral-xyz/anchor/dist/cjs/native/system";
-import { token } from "@coral-xyz/anchor/dist/cjs/utils";
 
 describe("cura test", () => {
     let cura: Cura;
@@ -77,8 +75,8 @@ describe("cura test", () => {
     });
 
     it("transfer the tokens" , async () => {
-        const reviever = new PublicKey("zdLTKiwtjkpB5ZS4TFDV182jUUXu1hEzb5D3PiwowoE");
-        const tx = await cura.transferTokens(super_admint_wallet.payer, reviever, 5000);
+        const reviever = new Keypair();
+        const tx = await cura.transferTokens(super_admint_wallet.payer, reviever.publicKey, 5000);
         console.log("transfer tx: ", tx);
     })
 });
