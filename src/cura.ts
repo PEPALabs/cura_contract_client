@@ -9,8 +9,6 @@ import {
 import { createMemoInstruction} from "@solana/spl-memo";
 import { checkTokenAccountAndBalance } from "./utils"
 import idl from "./IDL/cura.json";
-import { publicDecrypt } from "crypto";
-import { token } from "@coral-xyz/anchor/dist/cjs/utils";
 
 const CURA_PROGRAME_ID = new PublicKey(idl.address);
 const MPL_TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
@@ -21,17 +19,6 @@ const metadata = {
     uri: "https://shdw-drive.genesysgo.net/FnZUwmLXWYwdH9KmAsEkc9kNM6qGo6Qb5sDdvJGdqbjy/cura-token.json",
 }
 
-
-const whitelist = new Set<String>(
-    [
-        "6T9ajVYoL13jeNp9FCMoU9s4AEBaNFJpHvXptUz1MGag",
-        "6WbwySfYBuzcApKKqWgwqVYGCwwPkaFRJZTHLUWziALa"
-    ]
-);
-const blacklist = new Set<String>();
-
-// internal： close beta test， public： open beta test
-const MODE: "internal" | "public" = "internal";
 
 export const [tokenMintPDA] = PublicKey.findProgramAddressSync(
     [Buffer.from("mint")],
@@ -54,13 +41,7 @@ export class Cura {
         );
         this.connection = provider.connection;
     }
-    private checkAccess(publicKey: String) {
-        if (MODE === "internal" && !whitelist.has(publicKey)) {
-          throw new Error("Access denied: user not in whitelist.");
-        } else if (MODE === "public" && blacklist.has(publicKey)) {
-          throw new Error("Access denied: user is in the blacklist.");
-        }
-    }
+
     /**
      * Initialize or update the admin management. The signer must be the super admin.
      * @param new_admin new admin public key
@@ -110,7 +91,6 @@ export class Cura {
      * @returns The transaction to distribute token rewards.
     */
     async distributeTokenRewards (receiver: PublicKey, amount: number, memo: string): Promise<Transaction> {
-        this.checkAccess(receiver.toString());
         const ix1 = await this.program.methods
                 .distributeRewards(new anchor.BN(amount))
                 .accounts({
@@ -133,7 +113,6 @@ export class Cura {
      * @returns TransactionInstruction
      */
     async burnTokens (player: PublicKey, amount: number): Promise<TransactionInstruction> {
-        this.checkAccess(player.toString());
         const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, player);
         try {
             const isValid = await checkTokenAccountAndBalance(this.connection, playerAssociateTokenAccount, amount);
@@ -164,11 +143,6 @@ export class Cura {
      * @returns The transactionSignature
      */
     async approveDelegate (owner: Keypair, delegate: PublicKey, amount: number): Promise<String> {
-        this.checkAccess(owner.publicKey.toString());
-        // check if the delegate is on the blacklist
-        if (blacklist.has(delegate.toString())) {
-            throw new Error("Delegate is on the blacklist");
-        }
         const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, owner.publicKey);
         const final_amount = amount * 10 ** 9;
         try {
@@ -199,11 +173,6 @@ export class Cura {
      *
     */
     async transferTokens (owner: Keypair, receiver: PublicKey, amount: number): Promise<String> {
-        this.checkAccess(owner.publicKey.toString());
-        // check if the receiver is on the blacklist
-        if (blacklist.has(receiver.toString())) {
-            throw new Error("receiver is on the blacklist");
-        }
         const connection = this.program.provider.connection;
         const ownerAssociateTokenAccount = await getAssociatedTokenAddressSync(tokenMintPDA, owner.publicKey);
         const final_amount = amount * 10 ** 9;

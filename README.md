@@ -8,7 +8,6 @@ This is the official client library for interacting with the Cura contract on So
 - Distribute token rewards to users.
 - Burn tokens from an associated token account.
 - Manage admin accounts within the Cura system.
-- Support for blacklist/whitelist mechanisms to control user interactions.
 
 ## Installation
 
