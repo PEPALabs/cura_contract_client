@@ -55,28 +55,35 @@ describe("cura test", () => {
     //     console.log(`   Transaction Signature: ${tx}`);
     // });
 
+    it ("update whitelist!", async () => {
+        const txSig = await cura.updateWhitelist(super_admint_wallet.payer, 0, player.publicKey);
+        console.log("update whitelist transaction signature", txSig);
+    })
+
     it ("distribute rewards!", async () => {
         const memo = "Amount: 10, Award venue: [116.42,39.92], Award type: [comment]";
-        const tx = await cura.distributeTokenRewards(player.publicKey, 10, memo);
+        const tx = await cura.distributeTokenRewards(player, 10, memo);
         // Both the player and the administrator must sign
         const txsig = await provider.sendAndConfirm(tx, [player, super_admint_wallet.payer]);
         console.log("distribute rewards transaction signature", txsig);
+        // test
         const playerTokenAccount = await provider.connection.getTokenAccountsByOwner(player.publicKey, {mint: tokenMintPDA});
         const tokenBalance = await provider.connection.getTokenAccountBalance(playerTokenAccount.value[0].pubkey);
         assert.equal(tokenBalance.value.amount, 10e9.toString());
     });
 
     it("burn tokens!" , async () => {
-        const tx = await cura.burnTokens(player.publicKey, 10);
-        const txsig = await provider.sendAndConfirm(new Transaction().add(tx), [player]);
+        const tx = await cura.burnTokens(player, 1);
+        console.log("burn tx: ", tx);
+        // test
         const playerTokenAccount = await provider.connection.getTokenAccountsByOwner(player.publicKey, {mint: tokenMintPDA});
         const tokenBalance = await provider.connection.getTokenAccountBalance(playerTokenAccount.value[0].pubkey);
-        assert.equal(tokenBalance.value.amount, "0");
+        assert.equal(tokenBalance.value.amount, 9e9.toString());
     });
 
     it("transfer the tokens" , async () => {
         const reviever = new Keypair();
-        const tx = await cura.transferTokens(super_admint_wallet.payer, reviever.publicKey, 5000);
+        const tx = await cura.transferTokens(player, reviever.publicKey, 5);
         console.log("transfer tx: ", tx);
     })
 });

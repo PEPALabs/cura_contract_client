@@ -1,5 +1,5 @@
-import { PublicKey, Connection } from "@solana/web3.js";
-import { getAccount, TokenAccountNotFoundError, TokenInvalidAccountOwnerError} from "@solana/spl-token";
+import type { Commitment, ConfirmOptions, Connection, PublicKey, Signer } from '@solana/web3.js';
+import { getAccount, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID} from "@solana/spl-token";
 
 
 /**
@@ -13,10 +13,12 @@ import { getAccount, TokenAccountNotFoundError, TokenInvalidAccountOwnerError} f
 export async function checkTokenAccountAndBalance(
     connection: Connection,
     tokenAccountAddress: PublicKey,
-    requiredAmount: number | bigint
+    requiredAmount: number | bigint,
+    commitment?: Commitment,
+    programId = TOKEN_2022_PROGRAM_ID,
   ): Promise<boolean> {
     try {
-      const account = await getAccount(connection, tokenAccountAddress);
+      const account = await getAccount(connection, tokenAccountAddress, commitment, programId);
 
       const tokenBalance = await connection.getTokenAccountBalance(tokenAccountAddress);
 
@@ -25,7 +27,7 @@ export async function checkTokenAccountAndBalance(
       }
       return true;
     } catch (error) {
-        if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+      if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
         throw new Error("Associated token account not found or owner error");
       } else {
         throw error;

@@ -1,17 +1,21 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Keypair, PublicKey, Transaction, TransactionInstruction} from "@solana/web3.js";
+import { Keypair, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction, TransactionSignature} from "@solana/web3.js";
 import {
-    getAccount,
+    Account,
     getAssociatedTokenAddressSync,
     getOrCreateAssociatedTokenAccount,
     approve,
-    transfer } from "@solana/spl-token";
+    createTransferCheckedWithTransferHookInstruction,
+    burnChecked,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID
+} from "@solana/spl-token";
 import { createMemoInstruction} from "@solana/spl-memo";
 import { checkTokenAccountAndBalance } from "./utils"
 import idl from "./IDL/cura.json";
 
+const SUPER_ADMIN = new PublicKey("6T9ajVYoL13jeNp9FCMoU9s4AEBaNFJpHvXptUz1MGag");
 const CURA_PROGRAME_ID = new PublicKey(idl.address);
-const MPL_TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
 const metadata = {
     name: "Cura Token",
@@ -19,9 +23,9 @@ const metadata = {
     uri: "https://shdw-drive.genesysgo.net/FnZUwmLXWYwdH9KmAsEkc9kNM6qGo6Qb5sDdvJGdqbjy/cura-token.json",
 }
 
-
+const decimals = 9;
 export const [tokenMintPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from("mint")],
+    [Buffer.from("token-2022-mint")],
     CURA_PROGRAME_ID
 )
 export const [adminManagementPDA] = PublicKey.findProgramAddressSync (
@@ -46,63 +50,103 @@ export class Cura {
      * Initialize or update the admin management. The signer must be the super admin.
      * @param new_admin new admin public key
      * @param cmd 0: add admin, 1: remove admin
-     * @returns TransactionInstruction
+     * @returns TransactionSignature
      */
-    private async initOrUpdateAdminManagement (new_admin: PublicKey, cmd: number): Promise<TransactionInstruction> {
-        const tx = this.program.methods
+    public async initOrUpdateAdminManagement (signer: Keypair, new_admin: PublicKey, cmd: number): Promise<TransactionSignature> {
+        if (!signer.publicKey.equals(SUPER_ADMIN)) {
+            throw new Error("Only the super admin can call this function.");
+        }
+        const txSig = this.program.methods
             .updateAdmin(cmd, new_admin)
-            .accounts({
-                adminManagement: adminManagementPDA,
-            })
-            .instruction();
-        return tx;
+            .accounts({})
+            .rpc();
+        return txSig;
     }
 
 
     /**
      * Create cura token mint account. The signer must be super admin or admin in admin management. It only needs to be called once.
      * Only the administrator can call this function.
-     * @returns TransactionInstruction
+     * @returns TransactionSignature
     */
-    private async createMinter (): Promise<TransactionInstruction> {
-        const [metadataAddress] = PublicKey.findProgramAddressSync(
-            [
-              Buffer.from("metadata"),
-              MPL_TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-              tokenMintPDA.toBuffer(),
-            ],
-            MPL_TOKEN_METADATA_PROGRAM_ID
-          );
-        const tx = this.program.methods
-            .createMint(metadata.name, metadata.uri)
-            .accounts({
-                metadataAccount: metadataAddress,
-            })
-            .instruction();
-        return tx;
+    private async createMinter (signer: Keypair): Promise<TransactionSignature> {
+        if (!signer.publicKey.equals(SUPER_ADMIN)) {
+            throw new Error("Only the super admin can call this function.");
+        }
+        const txSig = await this.program.methods
+        .createMint(metadata)
+        .accounts({})
+        .rpc();
+        return txSig;
+    }
+
+    /**
+     * Update the whitelist. The signer must be super admin.
+     * @param cmd 0: add address to whitelist, 1: remove address from whitelist
+     * @param address The address to add or remove from whitelist
+     * @returns TransactionSignature
+     */
+    public async updateWhitelist(signer: Keypair, cmd: number, address: PublicKey): Promise<TransactionSignature> {
+        if (!signer.publicKey.equals(SUPER_ADMIN)) {
+            throw new Error("Only the super admin can call this function.");
+        }
+        const txSig = await this.program.methods
+        .updateWhitelist(cmd, address)
+        .accounts({})
+        .rpc();
+        return txSig;
+    }
+
+    /**
+     * Update the blacklist. The signer must be super admin.
+     * @param cmd 0: add address to blacklist, 1: remove address from blacklist
+     * @param address The address to add or remove from blacklist
+     * @returns TransactionSignature
+     */
+    public async updateBlacklist(signer: Keypair, cmd: number, address: PublicKey): Promise<TransactionSignature> {
+        if (!signer.publicKey.equals(SUPER_ADMIN)) {
+            throw new Error("Only the super admin can call this function.");
+        }
+        const txSig = await this.program.methods
+        .updateBlacklist(cmd, address)
+        .accounts({})
+        .rpc();
+        return txSig;
     }
 
     /**
      * Create cura token account. The signer must be super admin or admin in admin management.
      *
-     * @param receiver The receiver of the token.
+     * @param receiver The receiver of the token, this TransactionInstruction's feePayer.
      * @param amount The amount of token to distribute.
      * @param memo The details of this rewards distribute.
      * @returns The transaction to distribute token rewards.
     */
-    async distributeTokenRewards (receiver: PublicKey, amount: number, memo: string): Promise<Transaction> {
+    async distributeTokenRewards (receiver: Keypair, amount: number, memo: string): Promise<Transaction> {
+        const receiverAssociateTokenAccount = await getOrCreateAssociatedTokenAccount(
+            this.connection,
+            receiver,
+            tokenMintPDA,
+            receiver.publicKey,
+            false,
+            "confirmed",
+            {skipPreflight: true},
+            TOKEN_2022_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+        );
+
         const ix1 = await this.program.methods
                 .distributeRewards(new anchor.BN(amount))
                 .accounts({
-                    receiver: receiver,
+                    receiver: receiver.publicKey,
+                    receiverTokenAccount: receiverAssociateTokenAccount.address,
                 })
                 .instruction();
-
         // add memo
         const ix2 = createMemoInstruction(memo);
 
         let tx = new Transaction().add(ix1).add(ix2);
-        tx.feePayer = receiver;
+        tx.feePayer = receiver.publicKey;
         return tx;
     }
     /**
@@ -110,28 +154,39 @@ export class Cura {
      *
      * @param player  The player to burn tokens， must be associate token account owner.
      * @param amount  Burn tokens amount.
-     * @returns TransactionInstruction
+     * @returns       TransactionSignature
      */
-    async burnTokens (player: PublicKey, amount: number): Promise<TransactionInstruction> {
-        const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, player);
+    async burnTokens (player: Keypair, amount: number): Promise<TransactionSignature> {
+        const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, player.publicKey, false, TOKEN_2022_PROGRAM_ID);
+        const final_amount = amount * 10 ** decimals;
         try {
-            const isValid = await checkTokenAccountAndBalance(this.connection, playerAssociateTokenAccount, amount);
+            await checkTokenAccountAndBalance(
+                this.connection,
+                playerAssociateTokenAccount,
+                final_amount,
+                "confirmed",
+            );
         } catch (error) {
             if (error instanceof Error) {
                 console.error("Error:", error.message);
             } else {
                 console.error("Unknown error:", error);
             }
+            throw error;
         }
-        const tx = await this.program.methods
-            .tokenBurn(new anchor.BN(amount))
-            .accounts({
-                authority: player,
-                tokenAccount: playerAssociateTokenAccount,
-                mint: tokenMintPDA,
-            })
-            .instruction();
-        return tx;
+        const txSig = await burnChecked(
+            this.connection,
+            player,
+            playerAssociateTokenAccount,
+            tokenMintPDA,
+            player.publicKey,
+            final_amount,
+            decimals,
+            [],
+            {skipPreflight: true},
+            TOKEN_2022_PROGRAM_ID,
+          );
+        return txSig;
     }
 
     /**
@@ -142,17 +197,18 @@ export class Cura {
      *
      * @returns The transactionSignature
      */
-    async approveDelegate (owner: Keypair, delegate: PublicKey, amount: number): Promise<String> {
-        const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, owner.publicKey);
-        const final_amount = amount * 10 ** 9;
+    async approveDelegate (owner: Keypair, delegate: PublicKey, amount: number): Promise<TransactionSignature> {
+        const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, owner.publicKey, false, TOKEN_2022_PROGRAM_ID);
+        const final_amount = amount * 10 ** decimals;
         try {
-            const isValid = await checkTokenAccountAndBalance(this.connection, playerAssociateTokenAccount, final_amount);
+            await checkTokenAccountAndBalance(this.connection, playerAssociateTokenAccount, final_amount);
         } catch (error) {
             if (error instanceof Error) {
                 console.error("Error:", error.message);
             } else {
                 console.error("Unknown error:", error);
             }
+            throw error;
         }
         const tx = await approve (
             this.connection,
@@ -160,7 +216,10 @@ export class Cura {
             playerAssociateTokenAccount,
             delegate,
             owner.publicKey,
-            final_amount
+            final_amount,
+            [],
+            {skipPreflight: true},
+            TOKEN_2022_PROGRAM_ID,
         )
         return tx;
     }
@@ -170,30 +229,61 @@ export class Cura {
      * @param owner        Owner of the source account,it could also be the delegate.
      * @param receiver     The account to receive the tokens.
      * @param amount       The amount of tokens to transfer.
-     *
+     * @returns The transactionSignature
     */
-    async transferTokens (owner: Keypair, receiver: PublicKey, amount: number): Promise<String> {
-        const connection = this.program.provider.connection;
-        const ownerAssociateTokenAccount = await getAssociatedTokenAddressSync(tokenMintPDA, owner.publicKey);
+    async transferTokens (owner: Keypair, receiver: PublicKey, amount: number): Promise<TransactionSignature> {
+        const ownerAssociateTokenAccount = await getOrCreateAssociatedTokenAccount(
+            this.connection,
+            owner,
+            tokenMintPDA,
+            owner.publicKey,
+            false,
+            "confirmed",
+            {skipPreflight: true},
+            TOKEN_2022_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+        );
         const final_amount = amount * 10 ** 9;
         try {
-            const isValid = await checkTokenAccountAndBalance(this.connection, ownerAssociateTokenAccount, final_amount);
+            await checkTokenAccountAndBalance(this.connection, ownerAssociateTokenAccount.address, final_amount);
         } catch (error) {
             if (error instanceof Error) {
                 console.error("Error:", error.message);
             } else {
                 console.error("Unknown error:", error);
             }
+            throw error;
         }
-        const receiverAssociateTokenAccount = await getOrCreateAssociatedTokenAccount(connection, owner, tokenMintPDA, receiver);
-        const tx = await transfer(
-            connection,
+        const receiverAssociateTokenAccount = await getOrCreateAssociatedTokenAccount(
+            this.connection,
             owner,
-            ownerAssociateTokenAccount,
+            tokenMintPDA,
+            receiver,
+            false,
+            "confirmed",
+            {skipPreflight: true},
+            TOKEN_2022_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+        );
+        const transferInstruction = await createTransferCheckedWithTransferHookInstruction(
+            this.connection,
+            ownerAssociateTokenAccount.address,
+            tokenMintPDA,
             receiverAssociateTokenAccount.address,
-            owner,
-            final_amount
-        )
-        return tx;
+            owner.publicKey,
+            BigInt(final_amount),
+            decimals,
+            [],
+            'confirmed',
+            TOKEN_2022_PROGRAM_ID,
+          );
+        const tx = new Transaction().add(transferInstruction);
+        tx.feePayer = owner.publicKey;
+        const txSig =  await sendAndConfirmTransaction(
+            this.connection,
+            tx,
+            [owner],
+          );
+        return txSig;
     }
 }
