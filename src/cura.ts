@@ -49,10 +49,10 @@ export class Cura {
     /**
      * Initialize or update the admin management. The signer must be the super admin.
      * @param new_admin new admin public key
-     * @param cmd 0: add admin, 1: remove admin
+     * @param cmd 0: add admin, 1: remove admin, 2: ResetCurrentDistributeAmount
      * @returns TransactionSignature
      */
-    public async initOrUpdateAdminManagement (signer: Keypair, new_admin: PublicKey, cmd: number): Promise<TransactionSignature> {
+    public async initOrUpdateAdminManagement (signer: Keypair, new_admin: PublicKey | null, cmd: number): Promise<TransactionSignature> {
         if (!signer.publicKey.equals(SUPER_ADMIN)) {
             throw new Error("Only the super admin can call this function.");
         }

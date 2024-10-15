@@ -8,7 +8,13 @@ import { create, fetchCollection } from '@metaplex-foundation/mpl-core'
 import { base58 } from '@metaplex-foundation/umi/serializers'
 import { TransactionSignature, SendTransactionError, Connection } from "@solana/web3.js"
 
-
+/**
+ * Create a NFT with Umi
+ * @param umi - Umi instance
+ * @param collectionPk - Collection public key
+ * @param nftId - NFT ID, must be unique
+ * @returns - Transaction signature
+ */
 export async function createNftToCollectionWithImage(umi: Umi, collectionPk: UmiPk, nftId: string): Promise<TransactionSignature> {
     // upload image to IRYS
     // const umiImageFile = createGenericFile(image, 'cura_nft.png', {

@@ -3,6 +3,7 @@ import { strict as assert } from 'node:assert';
 import { adminManagementPDA, Cura, tokenMintPDA } from "../src/cura";
 import { PublicKey, Keypair, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { getAccount } from "@solana/spl-token";
 
 describe("cura test", () => {
     let cura: Cura;
@@ -37,14 +38,13 @@ describe("cura test", () => {
     });
 
 
-    // it("init or update admin management!", async () => {
-    //     const newAdmin = new Keypair();
-    //     const ix = await cura.initOrUpdateAdminManagement(newAdmin.publicKey, 0);
-    //     const tx = await provider.sendAndConfirm(new Transaction().add(ix), [super_admint_wallet.payer]);
-    //     // const admin_management = await cura.program.account.AdminManagement.fetch(adminManagementPDA);
-    //     // assert.equal(admin_management.admins[0].toBase58(), newAdmin.publicKey.toBase58());
-    //     console.log("init or update admin management signature: ", tx);
-    // })
+    it("init or update admin management!", async () => {
+        const newAdmin = new Keypair();
+        const tx = await cura.initOrUpdateAdminManagement( super_admint_wallet.payer, newAdmin.publicKey, 0);
+        // const admin_management = await cura.program.account.AdminManagement.fetch(adminManagementPDA);
+        // assert.equal(admin_management.admins[0].toBase58(), newAdmin.publicKey.toBase58());
+        console.log("init or update admin management signature: ", tx);
+    })
     // it("create minter!", async () => {
     //     const ix = await cura.createMinter();
     //     const tx = await provider.sendAndConfirm(new Transaction().add(ix), [super_admint_wallet.payer]);
@@ -71,6 +71,13 @@ describe("cura test", () => {
         const tokenBalance = await provider.connection.getTokenAccountBalance(playerTokenAccount.value[0].pubkey);
         assert.equal(tokenBalance.value.amount, 10e9.toString());
     });
+
+    it("reset current distribute amount!", async () => {
+
+        const tx = await cura.initOrUpdateAdminManagement(super_admint_wallet.payer, null, 2);
+        console.log("reset current distribute amount transaction signature", tx);
+
+    })
 
     it("burn tokens!" , async () => {
         const tx = await cura.burnTokens(player, 1);
