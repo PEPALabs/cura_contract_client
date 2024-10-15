@@ -2,7 +2,7 @@ import {
     Umi,
     createGenericFile,
     generateSigner,
-    PublicKey as UmiPk
+    PublicKey as UmiPk,
 } from "@metaplex-foundation/umi"
 import { create, fetchCollection } from '@metaplex-foundation/mpl-core'
 import { base58 } from '@metaplex-foundation/umi/serializers'
@@ -40,7 +40,6 @@ export async function createNftToCollectionWithImage(umi: Umi, collectionPk: Umi
 
     // fetch collection
     const collection = await fetchCollection(umi, collectionPk)
-    console.log(collection)
     // create nft
     const assetSinger = generateSigner(umi)
     try {
@@ -49,6 +48,11 @@ export async function createNftToCollectionWithImage(umi: Umi, collectionPk: Umi
             name: `${collection.name} #${nftId}`,
             uri: 'https://gateway.irys.xyz/2VcbaNhJ3FWmQHnBLsNfDqw6NbEjMYw8u2g9acLq2bqS',
             collection: collection,
+            plugins:[
+                {
+                    type: 'ImmutableMetadata'
+                }
+            ]
         }).sendAndConfirm(umi, {
             send: {
                 skipPreflight: true

@@ -66,9 +66,11 @@ describe('nft test', () => {
     it('create nft', async () => {
         // get image from local
         // const imageFile = fs.readFileSync('/Users/star/Pictures/cura.png')
-        const tx = await createNftToCollectionWithImage(umi, collectionPk, "1")
-        console.log('\nNFT Created')
-        console.log('View Transaction on Solana Explorer')
-        console.log(`https://explorer.solana.com/tx/${tx}?cluster=devnet`)
+        for (let i = 0; i < 3; i++) {
+            const tx = await createNftToCollectionWithImage(umi, collectionPk, `${i}`)
+            console.log('\nNFT Created')
+            console.log('View Transaction on Solana Explorer')
+            console.log(`https://explorer.solana.com/tx/${tx}?cluster=devnet`)
+        }
     })
 })
