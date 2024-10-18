@@ -25,8 +25,8 @@ describe('nft test', () => {
 
 
         // connection = new Connection('https://devnet.helius-rpc.com/?api-key=32e59a48-db47-494f-a6b6-61d9cbf64a25', {
-        connection = new Connection('https://api.devnet.solana.com', {
-        // connection = new Connection('http://localhost:8899', {
+        // connection = new Connection('https://api.devnet.solana.com', {
+        connection = new Connection('http://localhost:8899', {
             commitment: 'confirmed',
         });
 
@@ -66,9 +66,11 @@ describe('nft test', () => {
     it('create nft', async () => {
         // get image from local
         // const imageFile = fs.readFileSync('/Users/star/Pictures/cura.png')
-        const tx = await createNftToCollectionWithImage(umi, collectionPk, "1")
-        console.log('\nNFT Created')
-        console.log('View Transaction on Solana Explorer')
-        console.log(`https://explorer.solana.com/tx/${tx}?cluster=devnet`)
+        for (let i = 0; i < 3; i++) {
+            const tx = await createNftToCollectionWithImage(umi, collectionPk, `${i}`)
+            console.log('\nNFT Created')
+            console.log('View Transaction on Solana Explorer')
+            console.log(`https://explorer.solana.com/tx/${tx}?cluster=devnet`)
+        }
     })
 })

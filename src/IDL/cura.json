@@ -1,5 +1,5 @@
 {
-  "address": "HPVRnjAzwSyqq4EvnjMLPFR7ZSgtBaesWakCAMqSnco1",
+  "address": "8YQ6eRsBrL2iPbVRWqbn83GBeWndyphwcyyBJRqT7uRk",
   "metadata": {
     "name": "cura",
     "version": "0.1.0",
@@ -677,81 +677,86 @@
     },
     {
       "code": 6002,
+      "name": "AdminAlreadyExists",
+      "msg": "Admin already exists"
+    },
+    {
+      "code": 6003,
       "name": "AdminsListFull",
       "msg": "Admins list is full"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "AdminNotFound",
       "msg": "Admin not found"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "InvalidCmd",
       "msg": "Invalid command"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "InvalidTaskType",
       "msg": "Invalid task type"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "AccountAlreadyInitialized",
       "msg": "Account already initialized"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "IsNotCurrentlyTransferring",
       "msg": "The token is not currently transferring"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "AddressAlreadyInWhiteList",
       "msg": "Address already in white list"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "WhiteListFull",
       "msg": "White list is full"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "AddressNotInWhiteList",
       "msg": "Address not in white list"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "AddressAlreadyInBlackList",
       "msg": "Address already in black list"
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "BlackListFull",
       "msg": "Black list is full"
     },
     {
-      "code": 6013,
+      "code": 6014,
       "name": "AddressNotInBlackList",
       "msg": "Address not in black list"
     },
     {
-      "code": 6014,
+      "code": 6015,
       "name": "TransferToBlackListAddressNotAllowed",
       "msg": "Transfer to blacklisted account not allowed"
     },
     {
-      "code": 6015,
+      "code": 6016,
       "name": "AmountExceedsLimitForEachDistribution",
       "msg": "Amount exceeds the limit for each distribution"
     },
     {
-      "code": 6016,
+      "code": 6017,
       "name": "AdminMaxDistributeAmountExceeded",
       "msg": "Admin max distribute amount exceeded"
     },
     {
-      "code": 6017,
+      "code": 6018,
       "name": "MissingAdminPubkey",
       "msg": "Admin pubkey is required for this command"
     }

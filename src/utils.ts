@@ -1,5 +1,13 @@
-import type { Commitment, ConfirmOptions, Connection, PublicKey, Signer } from '@solana/web3.js';
-import { getAccount, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID} from "@solana/spl-token";
+import { Commitment, Connection, PublicKey,  TransactionInstruction} from '@solana/web3.js';
+import {
+  getAccount,
+  TokenAccountNotFoundError,
+  TokenInvalidAccountOwnerError,
+  TOKEN_2022_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction
+} from "@solana/spl-token";
 
 
 /**
@@ -33,4 +41,51 @@ export async function checkTokenAccountAndBalance(
         throw error;
     }
   }
+}
+
+/*
+ * Retrieve the associated token account, or create it if it doesn't exist
+ *
+ * @param connection               Connection to use
+ * @param mint                     Mint associated with the account to set or verify
+ * @param owner                    Owner of the account to set or verify
+ * @param allowOwnerOffCurve       Allow the owner account to be a PDA (Program Derived Address)
+ * @param commitment               Desired level of commitment for querying the state
+ * @param confirmOptions           Options for confirming the transaction
+ * @param programId                SPL Token program account
+ * @param associatedTokenProgramId SPL Associated Token program account
+ *
+ * @return [Address of the new associated token account, null | TransactionInstruction]
+ */
+export async function getOrCreateAssociatedTokenAccountInstruction(
+    connection: Connection,
+    mint: PublicKey,
+    owner: PublicKey,
+    allowOwnerOffCurve = false,
+    commitment?: Commitment,
+    programId = TOKEN_2022_PROGRAM_ID,
+    associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID
+): Promise<[PublicKey, TransactionInstruction | null]> {
+    const associatedToken = getAssociatedTokenAddressSync(
+      mint,
+      owner,
+      allowOwnerOffCurve,
+      programId,
+      associatedTokenProgramId
+    );
+    try {
+        // Try to fetch the account; if it exists, return its address with no instruction needed
+        await getAccount(connection, associatedToken, commitment, programId);
+        return [associatedToken, null];
+    } catch (error) {
+        // Handle specific errors that indicate the account doesn't exist or is invalid
+        if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+            // Create the associated token account instruction if the account doesn't exist
+            const instruction = createAssociatedTokenAccountInstruction(owner, associatedToken, owner, mint, programId, associatedTokenProgramId);
+            return [associatedToken, instruction];
+        } else {
+            // Re-throw any other errors
+            throw error;
+        }
+    }
 }

@@ -3,7 +3,6 @@ import { strict as assert } from 'node:assert';
 import { adminManagementPDA, Cura, tokenMintPDA } from "../src/cura";
 import { PublicKey, Keypair, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { getAccount } from "@solana/spl-token";
 
 describe("cura test", () => {
     let cura: Cura;
@@ -62,7 +61,7 @@ describe("cura test", () => {
 
     it ("distribute rewards!", async () => {
         const memo = "Amount: 10, Award venue: [116.42,39.92], Award type: [comment]";
-        const tx = await cura.distributeTokenRewards(player, 10, memo);
+        const tx = await cura.distributeTokenRewards(player.publicKey, 10, memo);
         // Both the player and the administrator must sign
         const txsig = await provider.sendAndConfirm(tx, [player, super_admint_wallet.payer]);
         console.log("distribute rewards transaction signature", txsig);

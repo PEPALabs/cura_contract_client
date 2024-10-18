@@ -1,7 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction, TransactionSignature} from "@solana/web3.js";
 import {
-    Account,
     getAssociatedTokenAddressSync,
     getOrCreateAssociatedTokenAccount,
     approve,
@@ -11,7 +10,7 @@ import {
     TOKEN_2022_PROGRAM_ID
 } from "@solana/spl-token";
 import { createMemoInstruction} from "@solana/spl-memo";
-import { checkTokenAccountAndBalance } from "./utils"
+import { checkTokenAccountAndBalance, getOrCreateAssociatedTokenAccountInstruction} from "./utils"
 import idl from "./IDL/cura.json";
 
 const SUPER_ADMIN = new PublicKey("6T9ajVYoL13jeNp9FCMoU9s4AEBaNFJpHvXptUz1MGag");
@@ -122,31 +121,32 @@ export class Cura {
      * @param memo The details of this rewards distribute.
      * @returns The transaction to distribute token rewards.
     */
-    async distributeTokenRewards (receiver: Keypair, amount: number, memo: string): Promise<Transaction> {
-        const receiverAssociateTokenAccount = await getOrCreateAssociatedTokenAccount(
+    async distributeTokenRewards (receiver: PublicKey, amount: number, memo: string): Promise<Transaction> {
+        const [receiverAssociateTokenAccount, createInstruction] = await getOrCreateAssociatedTokenAccountInstruction(
             this.connection,
-            receiver,
             tokenMintPDA,
-            receiver.publicKey,
+            receiver,
             false,
             "confirmed",
-            {skipPreflight: true},
             TOKEN_2022_PROGRAM_ID,
             ASSOCIATED_TOKEN_PROGRAM_ID
         );
-
+        let tx = new Transaction();
+        if (createInstruction) {
+            tx.add(createInstruction);
+        }
         const ix1 = await this.program.methods
                 .distributeRewards(new anchor.BN(amount))
                 .accounts({
-                    receiver: receiver.publicKey,
-                    receiverTokenAccount: receiverAssociateTokenAccount.address,
+                    receiver: receiver,
+                    receiverTokenAccount: receiverAssociateTokenAccount,
                 })
                 .instruction();
         // add memo
         const ix2 = createMemoInstruction(memo);
 
-        let tx = new Transaction().add(ix1).add(ix2);
-        tx.feePayer = receiver.publicKey;
+        tx.add(ix1).add(ix2);
+        tx.feePayer = receiver;
         return tx;
     }
     /**
