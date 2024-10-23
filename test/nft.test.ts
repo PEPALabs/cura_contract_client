@@ -7,8 +7,6 @@ import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 import { Keypair, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import fs from 'fs';
 import { createNftToCollectionWithImage, createCollectionWithUmi } from '../src/nft';
-import { generateKey } from "crypto";
-
 
 
 describe('nft test', () => {

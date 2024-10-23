@@ -10,7 +10,7 @@ import {
     TOKEN_2022_PROGRAM_ID
 } from "@solana/spl-token";
 import { createMemoInstruction} from "@solana/spl-memo";
-import { checkTokenAccountAndBalance, getOrCreateAssociatedTokenAccountInstruction} from "./utils"
+import { checkTokenAccountAndBalance, getOrCreateAssociatedTokenAccountInstruction, optimizeComputeUnit} from "./utils"
 import idl from "./IDL/cura.json";
 
 const SUPER_ADMIN = new PublicKey("6T9ajVYoL13jeNp9FCMoU9s4AEBaNFJpHvXptUz1MGag");
@@ -131,9 +131,9 @@ export class Cura {
             TOKEN_2022_PROGRAM_ID,
             ASSOCIATED_TOKEN_PROGRAM_ID
         );
-        let tx = new Transaction();
+        let instructions = [];
         if (createInstruction) {
-            tx.add(createInstruction);
+            instructions.push(createInstruction);
         }
         const ix1 = await this.program.methods
                 .distributeRewards(new anchor.BN(amount))
@@ -142,10 +142,14 @@ export class Cura {
                     receiverTokenAccount: receiverAssociateTokenAccount,
                 })
                 .instruction();
+        instructions.push(ix1);
         // add memo
         const ix2 = createMemoInstruction(memo);
+        instructions.push(ix2);
 
-        tx.add(ix1).add(ix2);
+        const finalInstructions = await optimizeComputeUnit(this.connection, instructions, receiver);
+
+        const tx = new Transaction().add(...finalInstructions);
         tx.feePayer = receiver;
         return tx;
     }
@@ -277,7 +281,8 @@ export class Cura {
             'confirmed',
             TOKEN_2022_PROGRAM_ID,
           );
-        const tx = new Transaction().add(transferInstruction);
+        const finalInstructions = await optimizeComputeUnit(this.connection, [transferInstruction], owner.publicKey);
+        const tx = new Transaction().add(...finalInstructions);
         tx.feePayer = owner.publicKey;
         const txSig =  await sendAndConfirmTransaction(
             this.connection,

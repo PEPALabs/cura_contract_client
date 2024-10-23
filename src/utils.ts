@@ -1,4 +1,4 @@
-import { Commitment, Connection, PublicKey,  TransactionInstruction} from '@solana/web3.js';
+import { Commitment, Connection, PublicKey,  TransactionInstruction, ComputeBudgetProgram } from '@solana/web3.js';
 import {
   getAccount,
   TokenAccountNotFoundError,
@@ -8,6 +8,7 @@ import {
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction
 } from "@solana/spl-token";
+import { getSimulationComputeUnits } from "@solana-developers/helpers"
 
 
 /**
@@ -88,4 +89,29 @@ export async function getOrCreateAssociatedTokenAccountInstruction(
             throw error;
         }
     }
+}
+
+/**
+ * Optimize the compute unit budget
+ * @param connection - Solana cluster connection
+ * @param instructions - Transaction instructions
+ * @param payer - Payer of the transaction
+ * @returns - Optimized transaction instructions
+ */
+export async function optimizeComputeUnit(connection: Connection, instructions: Array<TransactionInstruction>, payer: PublicKey): Promise<Array<TransactionInstruction>> {
+  const [microLamports, units] = await Promise.all([
+    // connection.getRecentPrioritizationFees()
+    0,      // Priority costs are not considered for the time being
+    getSimulationComputeUnits(
+      connection,
+      instructions,
+      payer,
+      []
+    ),
+  ]);
+  if (units) {
+    // add 10% more compute units for extra safety
+    instructions.unshift(ComputeBudgetProgram.setComputeUnitLimit({units: units * 1.1}));
+  }
+  return instructions;
 }
