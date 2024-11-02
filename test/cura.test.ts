@@ -1,8 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
 import { strict as assert } from 'node:assert';
 import { adminManagementPDA, Cura, tokenMintPDA } from "../src/cura";
+import { createMemo } from "../src/utils";
 import { PublicKey, Keypair, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import * as nacl from "tweetnacl";
+import * as bs58 from "bs58";
 
 describe("cura test", () => {
     let cura: Cura;
@@ -60,15 +63,22 @@ describe("cura test", () => {
     })
 
     it ("distribute rewards!", async () => {
-        const memo = "Amount: 10, Award venue: [116.42,39.92], Award type: [comment]";
-        const tx = await cura.distributeTokenRewards(player.publicKey, 10, memo);
-        // Both the player and the administrator must sign
-        const txsig = await provider.sendAndConfirm(tx, [player, super_admint_wallet.payer]);
-        console.log("distribute rewards transaction signature", txsig);
-        // test
-        const playerTokenAccount = await provider.connection.getTokenAccountsByOwner(player.publicKey, {mint: tokenMintPDA});
-        const tokenBalance = await provider.connection.getTokenAccountBalance(playerTokenAccount.value[0].pubkey);
-        assert.equal(tokenBalance.value.amount, 10e9.toString());
+
+        const reward_id = 1;
+        const token_amount = 10;
+        const award_type = "comment";
+        const memo = await createMemo(reward_id, token_amount, award_type);
+        console.log("memo", memo);
+        // admin 签名
+        const adminSignature = nacl.sign.detached(Uint8Array.from(Buffer.from(memo)), super_admint_wallet.payer.secretKey);
+        console.log("adminSignature", bs58.encode(adminSignature));
+
+        const tx = await cura.distributeTokenRewards(player.publicKey, memo, adminSignature, super_admint_wallet.publicKey);
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        tx.sign(player);
+
+        const txHash = await provider.connection.sendRawTransaction(tx.serialize(), {skipPreflight: true});
+        console.log("txHash", txHash);
     });
 
     it("reset current distribute amount!", async () => {

@@ -1,5 +1,5 @@
 {
-  "address": "8YQ6eRsBrL2iPbVRWqbn83GBeWndyphwcyyBJRqT7uRk",
+  "address": "AnpXXDijZZWEmQdeSy5PeDX1ScXeCSCPmUwmZXsfZCb9",
   "metadata": {
     "name": "cura",
     "version": "0.1.0",
@@ -115,13 +115,59 @@
       ],
       "accounts": [
         {
-          "name": "admin",
-          "signer": true
-        },
-        {
           "name": "receiver",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "white_list",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  95,
+                  108,
+                  105,
+                  115,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_id_queue",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100,
+                  95,
+                  105,
+                  100,
+                  95,
+                  113,
+                  117,
+                  101,
+                  117,
+                  101
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "receiver_token_account",
@@ -185,26 +231,16 @@
           }
         },
         {
-          "name": "white_list",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  119,
-                  104,
-                  105,
-                  116,
-                  101,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              }
-            ]
-          }
+          "name": "ix_sysvar",
+          "docs": [
+            "the supplied Sysvar could be anything else.",
+            "The Instruction Sysvar has not been implemented",
+            "in the Anchor framework yet, so this is the safe approach."
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "admin"
         },
         {
           "name": "token_program",
@@ -217,8 +253,17 @@
       ],
       "args": [
         {
-          "name": "amount",
-          "type": "u32"
+          "name": "msg",
+          "type": "bytes"
+        },
+        {
+          "name": "sig",
+          "type": {
+            "array": [
+              "u8",
+              64
+            ]
+          }
         }
       ]
     },
@@ -321,6 +366,60 @@
                   105,
                   115,
                   116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_reward_id_queue",
+      "discriminator": [
+        52,
+        145,
+        14,
+        180,
+        127,
+        0,
+        36,
+        209
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "address": "6T9ajVYoL13jeNp9FCMoU9s4AEBaNFJpHvXptUz1MGag"
+        },
+        {
+          "name": "reward_id_queue",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100,
+                  95,
+                  105,
+                  100,
+                  95,
+                  113,
+                  117,
+                  101,
+                  117,
+                  101
                 ]
               }
             ]
@@ -651,6 +750,19 @@
       ]
     },
     {
+      "name": "RewardIdQueue",
+      "discriminator": [
+        195,
+        13,
+        127,
+        80,
+        147,
+        171,
+        123,
+        38
+      ]
+    },
+    {
       "name": "WhiteList",
       "discriminator": [
         77,
@@ -759,6 +871,16 @@
       "code": 6018,
       "name": "MissingAdminPubkey",
       "msg": "Admin pubkey is required for this command"
+    },
+    {
+      "code": 6019,
+      "name": "SigVerificationFailed",
+      "msg": "Signature verification failed"
+    },
+    {
+      "code": 6020,
+      "name": "DuplicateRewardId",
+      "msg": "Duplicate reward id"
     }
   ],
   "types": [
@@ -787,6 +909,15 @@
                 5
               ]
             }
+          },
+          {
+            "name": "future_use",
+            "type": {
+              "array": [
+                "u8",
+                100
+              ]
+            }
           }
         ]
       }
@@ -808,6 +939,52 @@
             "name": "black_list",
             "type": {
               "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardIdQueue",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "is_initialized",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "start",
+            "type": "u8"
+          },
+          {
+            "name": "end",
+            "type": "u8"
+          },
+          {
+            "name": "count",
+            "type": "u8"
+          },
+          {
+            "name": "ids",
+            "type": {
+              "array": [
+                "u64",
+                150
+              ]
+            }
+          },
+          {
+            "name": "for_future_use",
+            "type": {
+              "array": [
+                "u8",
+                100
+              ]
             }
           }
         ]

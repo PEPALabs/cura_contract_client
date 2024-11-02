@@ -99,19 +99,37 @@ export async function getOrCreateAssociatedTokenAccountInstruction(
  * @returns - Optimized transaction instructions
  */
 export async function optimizeComputeUnit(connection: Connection, instructions: Array<TransactionInstruction>, payer: PublicKey): Promise<Array<TransactionInstruction>> {
-  const [microLamports, units] = await Promise.all([
-    // connection.getRecentPrioritizationFees()
+  try {
+    const [microLamports, units] = await Promise.all([
+      // connection.getRecentPrioritizationFees()
     0,      // Priority costs are not considered for the time being
     getSimulationComputeUnits(
       connection,
       instructions,
       payer,
-      []
-    ),
-  ]);
-  if (units) {
-    // add 10% more compute units for extra safety
-    instructions.unshift(ComputeBudgetProgram.setComputeUnitLimit({units: units * 1.1}));
+        []
+      ),
+    ]);
+    if (units) {
+     // add 10% more compute units for extra safety
+      instructions.unshift(ComputeBudgetProgram.setComputeUnitLimit({units: units * 1.1}));
+    }
+  } catch (error) {
+    console.log("error", error);
   }
   return instructions;
+}
+
+
+/**
+ * Create memo for distribute token rewards
+ * @param award_id - Award ID
+ * @param token_amount - Token amount
+ * @param award_type - Award type
+ * @returns - Memo
+ */
+export async function createMemo(award_id: number, token_amount: number, award_type: string): Promise<string> {
+  const timestamp = Date.now();
+  const memo = `Award ID: ${award_id}, Token Amount: ${token_amount}, Award type: [${award_type}], Timestamp: ${timestamp}`;
+  return memo;
 }

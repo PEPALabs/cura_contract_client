@@ -117,11 +117,20 @@ export class Cura {
      * Create cura token account. The signer must be super admin or admin in admin management.
      *
      * @param receiver The receiver of the token, this TransactionInstruction's feePayer.
-     * @param amount The amount of token to distribute.
      * @param memo The details of this rewards distribute.
+     * @param adminSignature The signature of the admin.
+     * @param amdinPk The admin public key.
      * @returns The transaction to distribute token rewards.
     */
-    async distributeTokenRewards (receiver: PublicKey, amount: number, memo: string): Promise<Transaction> {
+   async distributeTokenRewards (receiver: PublicKey, memo: string, adminSignature: Uint8Array, amdinPk: PublicKey): Promise<Transaction> {
+       let instructions = [];
+        // Ed25519 instruction
+        const ed25519Ix =  anchor.web3.Ed25519Program.createInstructionWithPublicKey({
+            publicKey: amdinPk.toBytes(),
+            message: Uint8Array.from(Buffer.from(memo)),
+            signature: adminSignature,
+        })
+        instructions.push(ed25519Ix);
         const [receiverAssociateTokenAccount, createInstruction] = await getOrCreateAssociatedTokenAccountInstruction(
             this.connection,
             tokenMintPDA,
@@ -131,25 +140,26 @@ export class Cura {
             TOKEN_2022_PROGRAM_ID,
             ASSOCIATED_TOKEN_PROGRAM_ID
         );
-        let instructions = [];
+
         if (createInstruction) {
             instructions.push(createInstruction);
         }
         const ix1 = await this.program.methods
-                .distributeRewards(new anchor.BN(amount))
-                .accounts({
-                    receiver: receiver,
-                    receiverTokenAccount: receiverAssociateTokenAccount,
-                })
-                .instruction();
+        .distributeRewards(Buffer.from(memo), Array.from(adminSignature))
+        .accounts({
+            admin: amdinPk,
+            receiver: receiver,
+            receiverTokenAccount: receiverAssociateTokenAccount,
+        })
+        .instruction();
         instructions.push(ix1);
         // add memo
         const ix2 = createMemoInstruction(memo);
         instructions.push(ix2);
 
-        const finalInstructions = await optimizeComputeUnit(this.connection, instructions, receiver);
+        // const finalInstructions = await optimizeComputeUnit(this.connection, instructions, receiver);
 
-        const tx = new Transaction().add(...finalInstructions);
+        const tx = new Transaction().add(...instructions);
         tx.feePayer = receiver;
         return tx;
     }
