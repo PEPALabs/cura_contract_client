@@ -12,7 +12,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "jest",
+    "test:cura": "jest test/cura.test.ts",
+    "test:nft": "jest test/nft.test.ts",
     "docs": "typedoc --out docs src"
   },
   "keywords": [],

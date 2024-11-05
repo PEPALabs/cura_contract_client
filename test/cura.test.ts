@@ -62,14 +62,13 @@ describe("cura test", () => {
         console.log("update whitelist transaction signature", txSig);
     })
 
-    it ("distribute rewards!", async () => {
-
+    it ("distribute rewards and check balance!", async () => {
         const reward_id = 1;
         const token_amount = 10;
         const award_type = "comment";
         const memo = await createMemo(reward_id, token_amount, award_type);
         console.log("memo", memo);
-        // admin 签名
+        // admin sign
         const adminSignature = nacl.sign.detached(Uint8Array.from(Buffer.from(memo)), super_admint_wallet.payer.secretKey);
         console.log("adminSignature", bs58.encode(adminSignature));
 
@@ -77,8 +76,13 @@ describe("cura test", () => {
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         tx.sign(player);
 
-        const txHash = await provider.connection.sendRawTransaction(tx.serialize(), {skipPreflight: true});
+        const txHash = await provider.connection.sendRawTransaction(tx.serialize());
         console.log("txHash", txHash);
+        // confirm tx
+        await provider.connection.confirmTransaction(txHash, "confirmed");
+        // get player token balance
+        const balance = await cura.getPlayerTokenBalance(player.publicKey);
+        console.log("player token balance: ", balance);
     });
 
     it("reset current distribute amount!", async () => {

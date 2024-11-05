@@ -7,7 +7,10 @@ import {
     createTransferCheckedWithTransferHookInstruction,
     burnChecked,
     ASSOCIATED_TOKEN_PROGRAM_ID,
-    TOKEN_2022_PROGRAM_ID
+    TOKEN_2022_PROGRAM_ID,
+    TokenAccountNotFoundError,
+    TokenInvalidAccountOwnerError,
+    getAccount
 } from "@solana/spl-token";
 import { createMemoInstruction} from "@solana/spl-memo";
 import { checkTokenAccountAndBalance, getOrCreateAssociatedTokenAccountInstruction, optimizeComputeUnit} from "./utils"
@@ -300,5 +303,29 @@ export class Cura {
             [owner],
           );
         return txSig;
+    }
+
+    /**
+     * Get the balance of the player's token account.
+     * @param player The player's public key.
+     * @returns The balance of the player's token account.
+     */
+    async getPlayerTokenBalance (player: PublicKey): Promise<number> {
+        try {
+            const playerAssociateTokenAccount = getAssociatedTokenAddressSync (tokenMintPDA, player, false, TOKEN_2022_PROGRAM_ID);
+            await getAccount(this.connection, playerAssociateTokenAccount, "confirmed", TOKEN_2022_PROGRAM_ID);
+
+            const balance = await this.connection.getTokenAccountBalance(playerAssociateTokenAccount);
+            if (balance.value.uiAmount === null) {
+                throw new Error("Token balance is null");
+            }
+            return balance.value.uiAmount;
+        } catch (error) {
+            if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+                throw new Error("Associated token account not found or owner error");
+              } else {
+                throw error;
+            }
+        }
     }
 }
